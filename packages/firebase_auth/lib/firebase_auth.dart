@@ -104,10 +104,11 @@ class FirebaseUser extends UserInfo {
 class AuthException implements Exception {
   final String code;
   final String message;
+
   const AuthException(this.code, this.message);
 }
 
-typedef void PhoneVerificationCompleted(FirebaseUser firebaseUser);
+typedef void PhoneVerificationCompleted(String smsCode);
 typedef void PhoneVerificationFailed(AuthException error);
 typedef void PhoneCodeSent(String verificationId, [int forceResendingToken]);
 typedef void PhoneCodeAutoRetrievalTimeout(String verificationId);
@@ -381,6 +382,20 @@ class FirebaseAuth {
     );
   }
 
+  Future<void> updatePhoneNumber({
+    @required String verificationId,
+    @required String smsCode,
+  }) async {
+    assert(verificationId != null && smsCode != null);
+    return await channel.invokeMethod(
+      'updatePhoneNumber',
+      <String, String>{
+        'verificationId': verificationId,
+        'smsCode': smsCode,
+      },
+    );
+  }
+
   Future<void> updateProfile(UserUpdateInfo userUpdateInfo) async {
     assert(userUpdateInfo != null);
     return await channel.invokeMethod(
@@ -428,6 +443,20 @@ class FirebaseAuth {
     return currentUser;
   }
 
+  Future<FirebaseUser> linkWithPhoneCredential({
+    @required String verificationId,
+    @required String smsCode,
+  }) async {
+    assert(verificationId != null && smsCode != null);
+    final Map<dynamic, dynamic> data =
+        await channel.invokeMethod('linkWithPhoneCredential', <String, String>{
+      'verificationId': verificationId,
+      'smsCode': smsCode,
+    });
+    final FirebaseUser currentUser = new FirebaseUser._(data);
+    return currentUser;
+  }
+
   /// Sets the user-facing language code for auth operations that can be
   /// internationalized, such as [sendEmailVerification]. This language
   /// code should follow the conventions defined by the IETF in BCP47.
@@ -447,7 +476,8 @@ class FirebaseAuth {
         final int handle = call.arguments['handle'];
         final PhoneVerificationCompleted verificationCompleted =
             _phoneAuthCallbacks[handle]['PhoneVerificationCompleted'];
-        verificationCompleted(await currentUser());
+        final String smsCode = call.arguments['smsCode'];
+        verificationCompleted(smsCode);
         break;
       case 'phoneVerificationFailed':
         final int handle = call.arguments['handle'];

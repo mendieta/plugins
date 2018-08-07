@@ -5,8 +5,8 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -87,12 +87,14 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future<void> _testVerifyPhoneNumber() async {
-    final PhoneVerificationCompleted verificationCompleted =
-        (FirebaseUser user) {
+    final PhoneVerificationCompleted verificationCompleted = (String smsCode) {
       setState(() {
-        _message =
-            Future<String>.value('signInWithPhoneNumber auto succeeded: $user');
+        _message = Future<String>.value(
+            'signInWithPhoneNumber auto succeeded: $smsCode');
       });
+      // Do something with your smsCode and verificationId
+      // _auth.signInWithPhoneNumber(verificationId: 'verificationId', smsCode: 'smsCode');
+      // _auth.linkWithPhoneCredential(verificationId: 'verificationId', smsCode: 'smsCode');
     };
 
     final PhoneVerificationFailed verificationFailed =

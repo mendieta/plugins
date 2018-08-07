@@ -111,12 +111,17 @@ public class FirebaseAuthPlugin implements MethodCallHandler {
       case "linkWithFacebookCredential":
         handleLinkWithFacebookCredential(call, result);
         break;
+      case "linkWithPhoneCredential":
+        handleLinkWithPhoneCredential(call, result);
+        break;
       case "updateProfile":
         handleUpdateProfile(call, result);
         break;
       case "updateEmail":
         handleUpdateEmail(call, result);
         break;
+      case "updatePhoneNumber":
+        handleUpdatePhoneNumber(call, result);
       case "startListeningAuthState":
         handleStartListeningAuthState(call, result);
         break;
@@ -160,7 +165,11 @@ public class FirebaseAuthPlugin implements MethodCallHandler {
         new PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
           @Override
           public void onVerificationCompleted(PhoneAuthCredential phoneAuthCredential) {
-            firebaseAuth
+            Map<String, Object> arguments = new HashMap<>();
+            arguments.put("handle", handle);
+            arguments.put("smsCode", phoneAuthCredential.getSmsCode());
+            channel.invokeMethod("phoneVerificationCompleted", arguments);
+            /*firebaseAuth
                 .signInWithCredential(phoneAuthCredential)
                 .addOnCompleteListener(
                     new OnCompleteListener<AuthResult>() {
@@ -172,7 +181,7 @@ public class FirebaseAuthPlugin implements MethodCallHandler {
                           channel.invokeMethod("phoneVerificationCompleted", arguments);
                         }
                       }
-                    });
+                    });*/
           }
 
           @Override
@@ -372,6 +381,18 @@ public class FirebaseAuthPlugin implements MethodCallHandler {
         .addOnCompleteListener(new SignInCompleteListener(result));
   }
 
+  private void handleLinkWithPhoneCredential(MethodCall call, final Result result) {
+    @SuppressWarnings("unchecked")
+    Map<String, String> arguments = (Map<String, String>) call.arguments;
+    String verificationId = arguments.get("verificationId");
+    String smsCode = arguments.get("smsCode");
+    AuthCredential credential = PhoneAuthProvider.getCredential(verificationId, smsCode);
+      firebaseAuth
+              .getCurrentUser()
+              .linkWithCredential(credential)
+              .addOnCompleteListener(new SignInCompleteListener(result));
+  }
+
   private void handleSignInWithFacebook(MethodCall call, final Result result) {
     @SuppressWarnings("unchecked")
     Map<String, String> arguments = (Map<String, String>) call.arguments;
@@ -473,6 +494,30 @@ public class FirebaseAuthPlugin implements MethodCallHandler {
                 }
               }
             });
+  }
+
+  private void handleUpdatePhoneNumber(MethodCall call, final Result result){
+    @SuppressWarnings("unchecked")
+    Map<String, String> arguments = (Map<String, String>) call.arguments;
+    String verificationId = arguments.get("verificationId");
+    String smsCode = arguments.get("smsCode");
+    PhoneAuthCredential credential = PhoneAuthProvider.getCredential(verificationId, smsCode);
+    firebaseAuth
+        .getCurrentUser()
+        .updatePhoneNumber(credential)
+        .addOnCompleteListener(
+            new OnCompleteListener<Void>() {
+              @Override
+              public void onComplete(@NonNull Task<Void> task) {
+                if(!task.isSuccessful()){
+                  Exception e = task.getException();
+                  result.error(ERROR_REASON_EXCEPTION, e.getMessage(), null);
+                } else {
+                  result.success(null);
+                }
+              }
+            }
+        );
   }
 
   private void handleStartListeningAuthState(MethodCall call, final Result result) {
